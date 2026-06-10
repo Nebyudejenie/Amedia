@@ -132,13 +132,16 @@ jobs:
         continue-on-error: true
 
       - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@v2
+        if: always() && hashFiles('trivy-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
         continue-on-error: true
 
   # ============================================================================
   # STAGE 3: DEPLOY TO PROXMOX (MAIN BRANCH ONLY)
+  # NOTE: Only works if GitHub Actions runner has network access to Proxmox.
+  # For private networks, set up self-hosted runner or deploy manually.
   # ============================================================================
   deploy:
     needs: build
@@ -148,6 +151,7 @@ jobs:
     environment:
       name: production
       url: https://api.${{ env.DOMAIN }}/system/health
+    continue-on-error: true
 
     steps:
       - name: Checkout code
