@@ -140,8 +140,19 @@ jobs:
 
   # ============================================================================
   # STAGE 3: DEPLOY TO PROXMOX (MAIN BRANCH ONLY)
-  # NOTE: Only works if GitHub Actions runner has network access to Proxmox.
-  # For private networks, set up self-hosted runner or deploy manually.
+  # ⚠️  IMPORTANT: GitHub Actions cloud runners CANNOT reach private networks.
+  # This step is expected to fail. Use one of these instead:
+  #
+  # 1. Manual Deployment (Recommended):
+  #    $ ./scripts/deploy-manual.sh
+  #
+  # 2. Self-Hosted GitHub Actions Runner:
+  #    Set up runner on Proxmox network, change "runs-on: ubuntu-latest"
+  #    to "runs-on: self-hosted" below
+  #
+  # 3. Webhook-based Deployment:
+  #    Set up pull-based deployment from Proxmox (see DEPLOYMENT_QUICKSTART.md)
+  #
   # ============================================================================
   deploy:
     needs: build
@@ -166,6 +177,9 @@ jobs:
 
       - name: Verify Proxmox connectivity
         run: |
+          echo "⚠️  Attempting to connect to private network from GitHub cloud..."
+          echo "ℹ️  This will fail unless you use a self-hosted runner."
+          echo "ℹ️  For manual deployment, run: ./scripts/deploy-manual.sh"
           ssh -i ~/.ssh/proxmox_key ${{ env.PROXMOX_USER }}@${{ env.PROXMOX_IP }} "echo 'Connected to Proxmox'"
 
       - name: Pull latest Docker image
