@@ -2,7 +2,7 @@
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthCredential, HTTPBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from auth_service import AuthService
 from schemas import UserResponse
@@ -20,7 +20,7 @@ class TokenData:
 
 
 async def get_current_user(
-    credentials: HTTPAuthCredential = Depends(security),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> TokenData:
     """Verify JWT token and extract claims."""
     token = credentials.credentials
@@ -69,7 +69,7 @@ def require_role(*allowed_roles: str):
 
 
 async def get_optional_user(
-    credentials: Optional[HTTPAuthCredential] = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> Optional[TokenData]:
     """Extract claims from optional JWT token."""
     if not credentials:

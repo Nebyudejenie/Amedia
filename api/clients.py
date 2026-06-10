@@ -3,8 +3,8 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-import aioredis
 import asyncpg
+from redis import asyncio as aioredis
 from minio import Minio
 from minio.error import S3Error
 from qdrant_client import AsyncQdrantClient
