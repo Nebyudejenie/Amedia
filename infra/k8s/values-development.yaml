@@ -1,0 +1,162 @@
+# Arada Intelligence OS — Kubernetes Development Values
+
+global:
+  namespace: arada-dev
+  domain: arada.local
+  environment: development
+  jwtSecretKey: "dev-secret-key-min-32-chars-12345678"
+
+postgres:
+  enabled: true
+  replicas: 1
+  storage:
+    size: 20Gi
+    class: standard
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+redis:
+  enabled: true
+  replicas: 1
+  storage:
+    size: 5Gi
+    class: standard
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+minio:
+  enabled: true
+  replicas: 1
+  storage:
+    size: 50Gi
+    class: standard
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+qdrant:
+  enabled: true
+  replicas: 1
+  storage:
+    size: 20Gi
+    class: standard
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+ollama:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "1000m"
+    limits:
+      memory: "4Gi"
+      cpu: "2000m"
+
+api:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: false
+
+worker:
+  content:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "500m"
+    autoscaling:
+      enabled: false
+
+  orchestrator:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "500m"
+    autoscaling:
+      enabled: false
+
+  publisher:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "500m"
+    autoscaling:
+      enabled: false
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+  hosts:
+    - host: arada.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+monitoring:
+  enabled: false
+
+logging:
+  enabled: true
+  level: debug
+  format: text
+
+rbac:
+  create: true
+
+serviceAccount:
+  create: true
+
+networkPolicy:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+
+backup:
+  enabled: false

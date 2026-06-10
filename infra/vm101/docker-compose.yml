@@ -1,0 +1,117 @@
+version: "3.8"
+
+# VM-101 (Media Services): MinIO, Qdrant, Ollama, orchestrator, publisher
+# Network: vmbr1 (10.10.10.0/24)
+# Connects to VM-100 (PostgreSQL, Redis) via internal network
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: arada-minio
+    environment:
+      MINIO_ROOT_USER: arada
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    command: server /data --console-address ":9001"
+    ports:
+      - "10.10.10.101:9000:9000"   # API (internal network)
+      - "10.10.10.101:9001:9001"   # Console (internal network)
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arada-internal
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: arada-qdrant
+    ports:
+      - "10.10.10.101:6333:6333"  # REST API (internal network)
+      - "10.10.10.101:6334:6334"  # gRPC (internal network)
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-qdrant}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arada-internal
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: arada-ollama
+    ports:
+      - "10.10.10.101:11434:11434"  # API (internal network)
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - arada-internal
+    restart: unless-stopped
+
+  orchestrator:
+    image: arada-os:latest
+    build:
+      context: ../../api
+      dockerfile: Dockerfile
+    container_name: arada-orchestrator
+    depends_on:
+      - postgres
+    environment:
+      DB_HOST: 10.10.10.100  # VM-100 PostgreSQL
+      DB_PORT: 5432
+      DB_USER: arada
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: arada
+    command: python orchestrator.py
+    networks:
+      - arada-internal
+    restart: unless-stopped
+
+  publisher:
+    image: arada-os:latest
+    build:
+      context: ../../api
+      dockerfile: Dockerfile
+    container_name: arada-publisher
+    depends_on:
+      - postgres
+    environment:
+      DB_HOST: 10.10.10.100  # VM-100 PostgreSQL
+      DB_PORT: 5432
+      DB_USER: arada
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: arada
+    command: python publisher.py
+    networks:
+      - arada-internal
+    restart: unless-stopped
+
+volumes:
+  minio_data:
+    driver: local
+  qdrant_data:
+    driver: local
+  ollama_data:
+    driver: local
+
+networks:
+  arada-internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24

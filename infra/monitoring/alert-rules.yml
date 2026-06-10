@@ -1,0 +1,173 @@
+groups:
+  - name: arada-alerts
+    interval: 30s
+    rules:
+      # Service availability
+      - alert: APIDown
+        expr: up{job="arada-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Arada API is down"
+          description: "Arada API at {{ $labels.instance }} has been unreachable for 2+ minutes"
+
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database is unreachable"
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: "Redis cache is unreachable"
+
+      # API performance
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API error rate"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API latency"
+          description: "P95 latency is {{ $value | humanizeDuration }} (threshold: 1s)"
+
+      - alert: LowRequestRate
+        expr: rate(http_requests_total[5m]) < 0.1
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "Low API request rate"
+          description: "Request rate has dropped below 0.1 req/s"
+
+      # Database performance
+      - alert: HighDatabaseConnections
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database connection count"
+          description: "{{ $value }} active connections (limit: 100)"
+
+      - alert: LowCacheHitRatio
+        expr: |
+          (pg_stat_database_blks_hit / (pg_stat_database_blks_hit + pg_stat_database_blks_read))
+          < 0.95
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "Low PostgreSQL cache hit ratio"
+          description: "Cache hit ratio is {{ $value | humanizePercentage }}"
+
+      - alert: HighTransactionRate
+        expr: rate(pg_stat_database_xact_commit[5m]) > 1000
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "High database transaction rate"
+          description: "{{ $value | humanize }} transactions/sec"
+
+      # Redis performance
+      - alert: HighRedisMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Redis memory usage"
+          description: "Redis memory is {{ $value | humanizePercentage }} full"
+
+      - alert: HighRedisEvictionRate
+        expr: rate(redis_evicted_keys_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Redis eviction rate"
+          description: "{{ $value | humanize }} keys evicted/sec"
+
+      - alert: HighRedisConnections
+        expr: redis_connected_clients > 100
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "High Redis client connections"
+          description: "{{ $value }} connected clients"
+
+      # System resources
+      - alert: HighCPUUsage
+        expr: rate(node_cpu_seconds_total{mode!="idle"}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value | humanizePercentage }}"
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space"
+          description: "{{ $labels.device }} has {{ $value | humanizePercentage }} free"
+
+      - alert: DiskInodesLow
+        expr: (node_filesystem_files_free / node_filesystem_files) < 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk inodes"
+          description: "{{ $labels.device }} has {{ $value | humanizePercentage }} free inodes"
+
+      # Network
+      - alert: HighNetworkErrors
+        expr: rate(node_network_transmit_errs_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High network transmit errors"
+          description: "{{ $value | humanize }} errors/sec on {{ $labels.device }}"
+
+      - alert: HighNetworkDropped
+        expr: rate(node_network_transmit_drop_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High network dropped packets"
+          description: "{{ $value | humanize }} dropped/sec on {{ $labels.device }}"

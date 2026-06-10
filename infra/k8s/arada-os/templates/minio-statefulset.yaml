@@ -1,0 +1,93 @@
+{{- if .Values.minio.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minio
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: minio
+    app.kubernetes.io/name: arada-os
+spec:
+  serviceName: minio
+  replicas: {{ .Values.minio.replicas }}
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+      - name: minio
+        image: {{ .Values.minio.image }}
+        command:
+          - minio
+          - server
+          - /data
+          - --console-address
+          - ":9001"
+        ports:
+        - containerPort: 9000
+          name: api
+        - containerPort: 9001
+          name: console
+        env:
+        - name: MINIO_ROOT_USER
+          value: {{ .Values.minio.credentials.accessKey }}
+        - name: MINIO_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: arada-secrets
+              key: minio-secret-key
+        livenessProbe:
+          httpGet:
+            path: /minio/health/live
+            port: 9000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /minio/health/live
+            port: 9000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: {{ .Values.minio.resources.requests.memory }}
+            cpu: {{ .Values.minio.resources.requests.cpu }}
+          limits:
+            memory: {{ .Values.minio.resources.limits.memory }}
+            cpu: {{ .Values.minio.resources.limits.cpu }}
+        volumeMounts:
+        - name: minio-data
+          mountPath: /data
+  volumeClaimTemplates:
+  - metadata:
+      name: minio-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: {{ .Values.minio.storage.class }}
+      resources:
+        requests:
+          storage: {{ .Values.minio.storage.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: minio
+spec:
+  clusterIP: None
+  ports:
+  - port: 9000
+    targetPort: api
+    name: api
+  - port: 9001
+    targetPort: console
+    name: console
+  selector:
+    app: minio
+{{- end }}

@@ -1,0 +1,58 @@
+version: "3.8"
+
+# Arada Reverse Proxy Stack: Nginx + Let's Encrypt/Certbot
+
+services:
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: arada-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/sites-available/arada
+      - /etc/nginx/sites-enabled:/etc/nginx/sites-enabled
+      - ./ssl:/etc/letsencrypt
+      - ./certbot:/var/www/certbot
+      - nginx_logs:/var/log/nginx
+    networks:
+      - arada
+    depends_on:
+      - api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost/system/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Let's Encrypt certificate manager
+  certbot:
+    image: certbot/certbot:latest
+    container_name: arada-certbot
+    volumes:
+      - ./ssl:/etc/letsencrypt
+      - ./certbot:/var/www/certbot
+    environment:
+      - CERTBOT_EMAIL=admin@arada.fun
+      - CERTBOT_DOMAIN=arada.fun,www.arada.fun
+    entrypoint: >
+      sh -c 'if [ ! -f /etc/letsencrypt/live/arada.fun/fullchain.pem ]; then
+        certbot certonly --webroot -w /var/www/certbot -d arada.fun -d www.arada.fun --agree-tos --no-eff-email;
+      fi &&
+      trap exit TERM; while :; do
+        certbot renew --webroot -w /var/www/certbot --quiet;
+        sleep 12h & wait $${!};
+      done;'
+    networks:
+      - arada
+    restart: unless-stopped
+
+volumes:
+  nginx_logs:
+    driver: local
+
+networks:
+  arada:
+    driver: bridge

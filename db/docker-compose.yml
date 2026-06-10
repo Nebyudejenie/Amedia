@@ -1,0 +1,28 @@
+# Arada Intelligence OS — PostgreSQL (data core).
+# Standalone compose so the schema can be brought up and migrated independently.
+# In the full stack (BP1.2) this service folds into the consolidated compose on
+# the 'internal' network and the host port mapping is REMOVED (never exposed).
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: arada-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-arada}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-arada}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgresql.tuning.conf:/etc/postgresql/arada-tuning.conf:ro
+      - ./init:/docker-entrypoint-initdb.d:ro
+    ports:
+      # Bound to loopback only — for local migration/dev. Remove in production.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-arada} -d ${POSTGRES_DB:-arada}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:

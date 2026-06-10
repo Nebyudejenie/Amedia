@@ -1,0 +1,243 @@
+# Arada Intelligence OS — Kubernetes Helm Chart Values
+
+# Global settings
+global:
+  namespace: arada
+  domain: arada.fun
+  environment: production
+
+# PostgreSQL (StatefulSet)
+postgres:
+  enabled: true
+  image: postgres:16-alpine
+  replicas: 1
+  storage:
+    size: 100Gi
+    class: fast-ssd  # Change to cloud provider (gp3, premium-rwo, etc.)
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "2000m"
+  persistence:
+    enabled: true
+    storageClass: fast-ssd
+    size: 100Gi
+  credentials:
+    username: arada
+    password: ""  # MUST be set via --set or secrets
+    database: arada
+  initdb:
+    enabled: true
+    scripts: []  # Migration scripts loaded from ConfigMap
+
+# Redis (StatefulSet)
+redis:
+  enabled: true
+  image: redis:7-alpine
+  replicas: 1
+  storage:
+    size: 10Gi
+    class: fast-ssd
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  persistence:
+    enabled: true
+    storageClass: fast-ssd
+    size: 10Gi
+
+# MinIO (StatefulSet)
+minio:
+  enabled: true
+  image: minio/minio:latest
+  replicas: 1
+  storage:
+    size: 500Gi
+    class: fast-ssd
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "2000m"
+  credentials:
+    accessKey: arada
+    secretKey: ""  # MUST be set via --set or secrets
+  buckets:
+    - arada
+    - arada-backups
+
+# Qdrant (StatefulSet)
+qdrant:
+  enabled: true
+  image: qdrant/qdrant:latest
+  replicas: 1
+  storage:
+    size: 50Gi
+    class: fast-ssd
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+  persistence:
+    enabled: true
+    storageClass: fast-ssd
+    size: 50Gi
+  apiKey: ""  # Optional
+
+# Ollama (Deployment)
+ollama:
+  enabled: true
+  image: ollama/ollama:latest
+  replicas: 1
+  resources:
+    requests:
+      memory: "4Gi"
+      cpu: "2000m"
+    limits:
+      memory: "8Gi"
+      cpu: "4000m"
+  storage:
+    size: 20Gi
+    class: fast-ssd
+
+# FastAPI (Deployment)
+api:
+  enabled: true
+  image: arada-os:latest
+  imagePullPolicy: IfNotPresent
+  replicas: 3
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "1000m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# Workers (Deployments)
+worker:
+  content:
+    enabled: true
+    image: arada-os:latest
+    replicas: 2
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "500m"
+      limits:
+        memory: "512Mi"
+        cpu: "1000m"
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 5
+
+  orchestrator:
+    enabled: true
+    image: arada-os:latest
+    replicas: 2
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "1000m"
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+
+  publisher:
+    enabled: true
+    image: arada-os:latest
+    replicas: 1
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "1000m"
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 5
+
+# Ingress
+ingress:
+  enabled: true
+  className: nginx  # or istio, traefik, etc.
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+  hosts:
+    - host: arada.fun
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: arada-tls
+      hosts:
+        - arada.fun
+
+# Service monitoring
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    scrapeInterval: 15s
+    retentionDays: 15
+
+# Logging
+logging:
+  enabled: true
+  level: info
+  format: json
+
+# RBAC
+rbac:
+  create: true
+
+# Service account
+serviceAccount:
+  create: true
+  name: arada
+
+# Network policies
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Backup
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 02:00 UTC
+  retention: 30  # days

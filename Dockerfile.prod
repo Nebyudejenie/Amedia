@@ -1,0 +1,67 @@
+# Arada Intelligence OS - Production Dockerfile
+# Multi-stage build for optimized image size and security
+
+# ============================================================================
+# STAGE 1: BUILDER
+# ============================================================================
+FROM python:3.11-slim as builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY api/requirements.txt .
+
+# Install Python dependencies (wheel format for faster installation)
+RUN pip install --user --no-cache-dir --no-warn-script-location \
+    -r requirements.txt
+
+# ============================================================================
+# STAGE 2: RUNTIME
+# ============================================================================
+FROM python:3.11-slim
+
+# Install only runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    dumb-init \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN groupadd -r arada && useradd -r -g arada arada
+
+WORKDIR /app
+
+# Copy Python packages from builder
+COPY --from=builder /root/.local /home/arada/.local
+
+# Copy application code
+COPY api/ /app/
+
+# Set environment
+ENV PATH=/home/arada/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    APP_ENV=production
+
+# Change ownership to non-root user
+RUN chown -R arada:arada /app
+
+# Switch to non-root user
+USER arada
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/system/health || exit 1
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+# Default command (can be overridden)
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

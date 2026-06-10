@@ -1,0 +1,66 @@
+# Arada Multi-Region Terraform Configuration Example
+# Copy to terraform.tfvars and customize for your environment
+
+environment = "prod"
+
+# ============================================================================
+# AWS Regions
+# ============================================================================
+
+primary_region   = "us-east-1"     # Primary deployment region
+secondary_region = "eu-west-1"     # Disaster recovery / failover region
+
+# ============================================================================
+# Networking
+# ============================================================================
+
+primary_vpc_cidr   = "10.0.0.0/16"   # Primary VPC CIDR
+secondary_vpc_cidr = "10.1.0.0/16"   # Secondary VPC CIDR
+
+route53_zone_name = "arada.fun"      # Your domain name
+
+# ============================================================================
+# Database Configuration
+# ============================================================================
+
+rds_instance_class         = "db.r6i.xlarge"      # Primary: 4 vCPU, 32GB RAM, $1.50/hr
+rds_replica_instance_class = "db.r6i.large"       # Replica: 2 vCPU, 16GB RAM, $0.75/hr (smaller for cost)
+rds_allocated_storage      = 500                  # 500GB storage
+rds_backup_retention_days  = 30                   # Keep 30 days of backups
+
+# ============================================================================
+# Cache Configuration (Redis)
+# ============================================================================
+
+redis_node_type = "cache.r6g.xlarge"  # 32GB RAM, multi-AZ
+
+# ============================================================================
+# API Servers (Auto Scaling)
+# ============================================================================
+
+# Primary region (serves all production traffic)
+api_instance_type = "t3.xlarge"        # 4 vCPU, 16GB RAM
+api_min_size      = 2                  # Minimum 2 instances
+api_max_size      = 10                 # Maximum 10 instances (scale up under load)
+
+# Secondary region (standby, smaller scale)
+api_instance_class_secondary = "t3.large"  # 2 vCPU, 8GB RAM (smaller than primary)
+api_min_size_secondary       = 1           # Minimum 1 instance
+api_max_size_secondary       = 3           # Maximum 3 instances
+
+# ============================================================================
+# Monitoring
+# ============================================================================
+
+enable_monitoring  = true
+log_retention_days = 30      # CloudWatch logs: keep 30 days
+
+# ============================================================================
+# Tags
+# ============================================================================
+
+additional_tags = {
+  CostCenter = "Engineering"
+  Owner      = "Platform"
+  Project    = "Arada"
+}

@@ -1,0 +1,279 @@
+version: "3.8"
+
+services:
+  # Core data layer
+  postgres:
+    image: postgres:16-alpine
+    container_name: arada-postgres
+    environment:
+      POSTGRES_USER: arada
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: arada
+      POSTGRES_INITDB_ARGS: "-c shared_buffers=512MB -c effective_cache_size=2GB -c work_mem=16MB"
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arada"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arada-internal
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: arada-redis
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - ./data/redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arada-internal
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: arada-minio
+    environment:
+      MINIO_ROOT_USER: arada
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    command: server /data --console-address ":9001"
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arada-internal
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: arada-qdrant
+    ports:
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+      - ./data/qdrant/init-collections.sh:/init-collections.sh
+    environment:
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-qdrant}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arada-internal
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: arada-ollama
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - arada-internal
+    restart: unless-stopped
+
+  # FastAPI application
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: arada-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    environment:
+      DEBUG: "false"
+      CORS_ORIGINS: '["http://localhost:3000","http://localhost:8080"]'
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: arada
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: arada
+      DB_POOL_MIN: 5
+      DB_POOL_MAX: 20
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      MINIO_HOST: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: arada
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET_PREFIX: arada
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      OLLAMA_HOST: ollama
+      OLLAMA_PORT: 11434
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: HS256
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 15
+      JWT_REFRESH_TOKEN_EXPIRE_DAYS: 7
+      RATE_LIMIT_CALLS: 100
+      RATE_LIMIT_PERIOD_SECONDS: 60
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./api:/app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://127.0.0.1:8000/system/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arada-internal
+    restart: unless-stopped
+
+  # Background workers
+  worker-content:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: arada-worker-content
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DEBUG: "false"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: arada
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: arada
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      OLLAMA_HOST: ollama
+      OLLAMA_PORT: 11434
+    command: python worker.py
+    networks:
+      - arada-internal
+    restart: unless-stopped
+
+  orchestrator:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: arada-orchestrator
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DEBUG: "false"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: arada
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: arada
+    command: python orchestrator.py
+    networks:
+      - arada-internal
+    restart: unless-stopped
+
+  publisher:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: arada-publisher
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DEBUG: "false"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: arada
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: arada
+    command: python publisher.py
+    networks:
+      - arada-internal
+    restart: unless-stopped
+
+  # Analytics dashboard
+  metabase:
+    image: metabase/metabase:latest
+    container_name: arada-metabase
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_HOST: postgres
+      MB_DB_PORT: 5432
+      MB_DB_USER: metabase
+      MB_DB_PASS: ${METABASE_DB_PASSWORD:-metabase-pass}
+      MB_ENCRYPTION_SECRET_KEY: ${METABASE_SECRET_KEY:-change-me-to-64-char-secret}
+      MB_ADMIN_EMAIL: admin@arada.fun
+      MB_ADMIN_PASSWORD: ${METABASE_ADMIN_PASSWORD:-changeme}
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - metabase_data:/metabase-data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arada-internal
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  qdrant_data:
+    driver: local
+  ollama_data:
+    driver: local
+  metabase_data:
+    driver: local
+
+networks:
+  arada-internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24

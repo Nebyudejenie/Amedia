@@ -1,0 +1,59 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: arada
+    environment: production
+
+scrape_configs:
+  # Arada API (FastAPI /metrics endpoint)
+  - job_name: arada-api
+    static_configs:
+      - targets: ['api:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # PostgreSQL (via postgres_exporter)
+  - job_name: postgres
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 15s
+
+  # Redis (via redis_exporter)
+  - job_name: redis
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 15s
+
+  # Node (system metrics)
+  - job_name: node
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+
+  # Prometheus itself
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+# Alert rules
+rule_files:
+  - 'alert-rules.yml'
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+      timeout: 10s
+
+# Remote storage (optional)
+# remote_write:
+#   - url: "https://cortex.example.com/api/prom/push"
+
+# Relabeling (optional)
+# metric_relabel_configs:
+#   - source_labels: [__name__]
+#     regex: 'node_.*'
+#     action: drop
