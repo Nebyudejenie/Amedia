@@ -425,4 +425,6 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 10.10.10.0/24
+        # NOTE: must NOT overlap Proxmox vmbr1 (10.10.10.0/24) — caused
+        # host→container port-forwarding to fail. Use an isolated subnet.
+        - subnet: 172.30.0.0/24
