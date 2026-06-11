@@ -179,19 +179,51 @@ async def register(request: RegisterRequest) -> LoginResponse:
     )
 
 
+MAX_FAILED_LOGINS = 5
+LOCKOUT_MINUTES = 15
+
+
 @router.post("/login", response_model=LoginResponse)
 async def login(request: LoginRequest) -> LoginResponse:
-    """Authenticate user and return tokens."""
+    """Authenticate user and return tokens.
+
+    After 5 failed attempts the account is locked for 15 minutes.
+    """
     async with PostgreSQLPool.acquire() as conn:
         user = await conn.fetchrow(
             """
-            SELECT id, email, password_hash, full_name, is_admin, is_active, created_at
+            SELECT id, email, password_hash, full_name, is_admin, is_active,
+                   created_at, failed_login_attempts, locked_until
             FROM auth.users WHERE email = $1
             """,
             request.email,
         )
 
+        # Account lockout check (before password verification)
+        if user and user["locked_until"]:
+            from datetime import datetime, timezone
+            if user["locked_until"] > datetime.now(timezone.utc):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Account temporarily locked. Try again later.",
+                )
+
         if not user or not verify_password(request.password, user["password_hash"]):
+            if user:
+                # Track failed attempt; lock after MAX_FAILED_LOGINS
+                attempts = (user["failed_login_attempts"] or 0) + 1
+                lock_clause = (
+                    f", locked_until = now() + INTERVAL '{LOCKOUT_MINUTES} minutes'"
+                    if attempts >= MAX_FAILED_LOGINS
+                    else ""
+                )
+                await conn.execute(
+                    f"UPDATE auth.users SET failed_login_attempts = $2{lock_clause} WHERE id = $1",
+                    user["id"],
+                    attempts,
+                )
+                if attempts >= MAX_FAILED_LOGINS:
+                    logger.warning(f"Account locked after {attempts} failed logins: {request.email}")
             logger.warning(f"Login failed: {request.email}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -203,6 +235,20 @@ async def login(request: LoginRequest) -> LoginResponse:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Account is inactive",
             )
+
+        # Success: reset counters, stamp last login, audit
+        await conn.execute(
+            """
+            UPDATE auth.users
+            SET failed_login_attempts = 0, locked_until = NULL, last_login_at = now()
+            WHERE id = $1
+            """,
+            user["id"],
+        )
+        await conn.execute(
+            "INSERT INTO auth.audit_logs (user_id, action) VALUES ($1, 'auth.login')",
+            user["id"],
+        )
 
     access_token = create_access_token(user["id"], user["email"], user["is_admin"])
     refresh_token = create_refresh_token(user["id"])

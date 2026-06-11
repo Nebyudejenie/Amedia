@@ -10,7 +10,9 @@ from prometheus_client import Counter, Histogram, generate_latest
 
 from clients import PostgreSQLPool, RedisClient, MinIOClient, QdrantClient
 from config import settings
-from routers import auth, content, health, media, workflow, ml, webhooks, analytics
+from routers import auth, account, users, content, health, media, workflow, ml, webhooks, analytics
+from middleware.rate_limit import RateLimitMiddleware
+from middleware.security_headers import SecurityHeadersMiddleware, SafeErrorMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -47,13 +49,20 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS
+# Security middleware (order matters: outermost added last)
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(SafeErrorMiddleware)
+
+# CORS — restricted origins, methods, and headers for credentialed requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key"],
+    expose_headers=["X-Total-Count", "X-Request-ID"],
+    max_age=3600,
 )
 
 
@@ -92,6 +101,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Routes
 app.include_router(auth.router)
+app.include_router(account.router)
+app.include_router(users.router)
 app.include_router(content.router)
 app.include_router(workflow.router)
 app.include_router(media.router)
