@@ -116,6 +116,21 @@ def validate_password_strength(password: str) -> Optional[str]:
 # ============================================================================
 
 
+@router.get("/check-email")
+async def check_email_availability(email: str) -> dict:
+    """Real-time email availability check for the registration form.
+
+    Reveals account existence by design (the register endpoint's 409 does the
+    same); mass enumeration is throttled by the /auth/ rate limit (5/min/IP).
+    """
+    async with PostgreSQLPool.acquire() as conn:
+        exists = await conn.fetchval(
+            "SELECT 1 FROM auth.users WHERE email = $1",
+            email.strip().lower(),
+        )
+    return {"available": exists is None}
+
+
 @router.post("/register", response_model=LoginResponse, status_code=201)
 async def register(request: RegisterRequest) -> LoginResponse:
     """Register a new user account."""

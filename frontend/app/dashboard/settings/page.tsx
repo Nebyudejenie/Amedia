@@ -1,21 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { PasswordStrength } from '@/components/auth/PasswordStrength';
-import { api, ApiError, type User } from '@/lib/api';
+import { ProfileForm } from '@/components/forms/ProfileForm';
+import { ChangePasswordForm } from '@/components/forms/ChangePasswordForm';
+import { api, ApiError } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
-import { passwordSchema } from '@/lib/validators';
 import { relativeTime } from '@/lib/format';
 import { useAuthStore } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
@@ -24,63 +20,6 @@ import type { ApiKey, Invoice } from '@/lib/types';
 // ---------------------------------------------------------------------------
 // Profile
 // ---------------------------------------------------------------------------
-
-function ProfileSection() {
-  const { user, setUser } = useAuthStore();
-  const addToast = useUiStore((s) => s.addToast);
-  const [fullName, setFullName] = useState(user?.full_name ?? '');
-  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url ?? '');
-  const [saving, setSaving] = useState(false);
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      const body: Record<string, string> = {};
-      if (fullName !== (user?.full_name ?? '')) body.full_name = fullName;
-      if (avatarUrl && avatarUrl !== (user?.avatar_url ?? '')) body.avatar_url = avatarUrl;
-      const updated = await api.patch<User>('/api/v1/users/me', body);
-      setUser(updated);
-      addToast('Profile updated', 'success');
-    } catch (err) {
-      addToast(err instanceof ApiError ? err.detail : 'Update failed', 'error');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Card title="Profile">
-      <div className="space-y-4">
-        <div className="flex items-center gap-4">
-          {/* eslint-disable-next-line @next/next/no-img-element -- avatar URLs are external */}
-          <img
-            src={avatarUrl || `https://api.dicebear.com/8.x/initials/svg?seed=${user?.email}`}
-            alt="Avatar"
-            className="h-16 w-16 rounded-full border border-gray-200 object-cover dark:border-gray-700"
-          />
-          <div className="flex-1">
-            <Input
-              label="Avatar URL"
-              placeholder="https://…/avatar.png"
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-            />
-          </div>
-        </div>
-        <Input label="Email" value={user?.email ?? ''} disabled />
-        <Input
-          label="Full name"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          placeholder="Your name"
-        />
-        <Button onClick={save} isLoading={saving}>
-          Save changes
-        </Button>
-      </div>
-    </Card>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // API Keys
@@ -357,48 +296,11 @@ function NotificationsSection() {
 // Danger zone
 // ---------------------------------------------------------------------------
 
-const changePasswordSchema = z
-  .object({
-    current_password: z.string().min(1, 'Current password required'),
-    new_password: passwordSchema,
-    confirm: z.string(),
-  })
-  .refine((d) => d.new_password === d.confirm, {
-    message: 'Passwords do not match',
-    path: ['confirm'],
-  });
-
-type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
-
 function DangerZone() {
   const addToast = useUiStore((s) => s.addToast);
   const logout = useAuthStore((s) => s.logout);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<ChangePasswordInput>({ resolver: zodResolver(changePasswordSchema) });
-
-  const newPassword = watch('new_password', '');
-
-  const changePassword = async (data: ChangePasswordInput) => {
-    try {
-      await api.post('/auth/change-password', {
-        current_password: data.current_password,
-        new_password: data.new_password,
-      });
-      addToast('Password changed — please sign in again', 'success');
-      setPasswordOpen(false);
-      // Backend invalidates all sessions; send the user to login
-      setTimeout(() => void logout(), 1200);
-    } catch (err) {
-      addToast(err instanceof ApiError ? err.detail : 'Change failed', 'error');
-    }
-  };
 
   return (
     <Card title="Danger zone" className="border-red-200 dark:border-red-900">
@@ -424,40 +326,7 @@ function DangerZone() {
       </div>
 
       <Modal open={passwordOpen} onClose={() => setPasswordOpen(false)} title="Change password">
-        <form onSubmit={handleSubmit(changePassword)} className="space-y-4" noValidate>
-          <Input
-            label="Current password"
-            showPasswordToggle
-            autoComplete="current-password"
-            error={errors.current_password?.message}
-            {...register('current_password')}
-          />
-          <div className="space-y-2">
-            <Input
-              label="New password"
-              showPasswordToggle
-              autoComplete="new-password"
-              error={errors.new_password?.message}
-              {...register('new_password')}
-            />
-            <PasswordStrength password={newPassword} />
-          </div>
-          <Input
-            label="Confirm new password"
-            showPasswordToggle
-            autoComplete="new-password"
-            error={errors.confirm?.message}
-            {...register('confirm')}
-          />
-          <div className="flex justify-end gap-3">
-            <Button type="button" variant="secondary" onClick={() => setPasswordOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" isLoading={isSubmitting}>
-              Change password
-            </Button>
-          </div>
-        </form>
+        <ChangePasswordForm onDone={() => setPasswordOpen(false)} />
       </Modal>
 
       <ConfirmDialog
@@ -487,7 +356,9 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl space-y-6">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-      <ProfileSection />
+      <Card title="Profile">
+        <ProfileForm />
+      </Card>
       <ApiKeysSection />
       <BillingSection />
       <NotificationsSection />

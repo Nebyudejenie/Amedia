@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 import { registerSchema, type RegisterInput } from '@/lib/validators';
 import { authApi, ApiError } from '@/lib/api';
+import { useEmailAvailability } from '@/lib/hooks';
 import { useAuthStore } from '@/stores/auth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -29,6 +30,8 @@ export function RegisterForm() {
   });
 
   const password = watch('password', '');
+  const email = watch('email', '');
+  const emailStatus = useEmailAvailability(email);
 
   const onSubmit = async (data: RegisterInput) => {
     setServerError(null);
@@ -68,14 +71,27 @@ export function RegisterForm() {
         {...register('full_name')}
       />
 
-      <Input
-        label="Email"
-        type="email"
-        autoComplete="email"
-        placeholder="you@example.com"
-        error={errors.email?.message}
-        {...register('email')}
-      />
+      <div className="space-y-1">
+        <Input
+          label="Email"
+          type="email"
+          autoComplete="email"
+          placeholder="you@example.com"
+          error={errors.email?.message ?? (emailStatus === 'taken' ? 'Email already in use' : undefined)}
+          {...register('email')}
+        />
+        {!errors.email && emailStatus === 'checking' && (
+          <p className="text-sm text-gray-400">Checking availability…</p>
+        )}
+        {!errors.email && emailStatus === 'available' && (
+          <p className="flex items-center gap-1 text-sm text-green-600" role="status">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Email available
+          </p>
+        )}
+      </div>
 
       <div className="space-y-2">
         <Input
@@ -120,8 +136,14 @@ export function RegisterForm() {
         </p>
       )}
 
-      <Button type="submit" isLoading={isSubmitting} disabled={!isValid} className="w-full" size="lg">
-        Create account
+      <Button
+        type="submit"
+        isLoading={isSubmitting}
+        disabled={!isValid || emailStatus === 'taken'}
+        className="w-full"
+        size="lg"
+      >
+        {isSubmitting ? 'Creating account…' : 'Create account'}
       </Button>
 
       <p className="text-center text-sm text-gray-500">

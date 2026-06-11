@@ -89,7 +89,7 @@ export function LoginForm() {
       </div>
 
       <Button type="submit" isLoading={isSubmitting} className="w-full" size="lg">
-        Sign in
+        {isSubmitting ? 'Logging in…' : 'Sign in'}
       </Button>
 
       <p className="text-center text-sm text-gray-500">
