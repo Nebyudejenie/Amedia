@@ -10,7 +10,7 @@ from prometheus_client import Counter, Histogram, generate_latest
 
 from clients import PostgreSQLPool, RedisClient, MinIOClient, QdrantClient
 from config import settings
-from routers import auth, content, health, media, workflow
+from routers import auth, content, health, media, workflow, ml, webhooks, analytics
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +96,9 @@ app.include_router(content.router)
 app.include_router(workflow.router)
 app.include_router(media.router)
 app.include_router(health.router)
+app.include_router(ml.router)
+app.include_router(webhooks.router)
+app.include_router(analytics.router)
 
 # Metrics endpoint
 @app.get("/metrics")
