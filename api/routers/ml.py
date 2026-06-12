@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from dependencies import get_current_user, TokenData, require_role
+from services.usage_service import require_within_usage_limit, record_usage
 from ml import (
     LLMService,
     ForecastService,
@@ -30,12 +31,13 @@ class PredictionRequest:
 async def analyze_sentiment(
     input_data: dict,
     model_key: str = "huggingface:distilbert-base-uncased-finetuned-sst-2-english",
-    token: TokenData = Depends(get_current_user),
+    token: TokenData = Depends(require_within_usage_limit),
 ):
-    """Analyze sentiment of text."""
+    """Analyze sentiment of text. Counts against the plan's monthly limit."""
     try:
         service = SentimentService()
         result = await service.predict(input_data, model_key=model_key)
+        await record_usage(token.user_id)
         return {"data": result, "status": "success"}
     except MLPredictionFailed as e:
         raise HTTPException(status_code=400, detail=str(e))
