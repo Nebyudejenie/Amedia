@@ -33,7 +33,8 @@ WRITE_LIMIT = 20
 READ_LIMIT = 100
 
 # Paths excluded from rate limiting
-EXEMPT_PATHS = {"/system/health", "/metrics", "/docs", "/openapi.json", "/redoc"}
+# /webhooks/telegram authenticates via its own secret token and may burst
+EXEMPT_PATHS = {"/system/health", "/metrics", "/docs", "/openapi.json", "/redoc", "/webhooks/telegram"}
 
 # In-memory fallback store: key -> list of timestamps
 _memory_store: dict = defaultdict(list)
