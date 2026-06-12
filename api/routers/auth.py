@@ -8,13 +8,13 @@ import bcrypt
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, EmailStr, Field
 
-from api.clients import PostgreSQLPool
-from api.auth.jwt_handler import (
+from clients import PostgreSQLPool
+from auth.jwt_handler import (
     create_access_token,
     create_refresh_token,
     verify_token,
 )
-from api.auth.security import (
+from auth.security import (
     get_current_user,
     TokenData,
     revoke_token,

@@ -3,7 +3,7 @@ import pytest
 from uuid import uuid4
 from fastapi.testclient import TestClient
 
-from api.main import app
+from main import app
 
 client = TestClient(app)
 
@@ -176,7 +176,7 @@ class TestWebhookPayloadSignature:
     @pytest.mark.unit
     def test_webhook_signature_in_headers(self):
         """Test that webhooks include signature headers."""
-        from api.webhooks.signatures import sign_payload
+        from webhooks.signatures import sign_payload
 
         payload = {"event": "test", "data": "value"}
         secret = "test_secret"

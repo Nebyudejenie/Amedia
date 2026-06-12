@@ -9,14 +9,14 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, Field
 
-from api.clients import PostgreSQLPool
-from api.auth.security import get_current_user, TokenData, revoke_token
-from api.routers.auth import (
+from clients import PostgreSQLPool
+from auth.security import get_current_user, TokenData, revoke_token
+from routers.auth import (
     hash_password,
     verify_password,
     validate_password_strength,
 )
-from api.services import email_service
+from services import email_service
 
 logger = logging.getLogger(__name__)
 

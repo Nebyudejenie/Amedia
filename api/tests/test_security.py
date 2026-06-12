@@ -2,15 +2,15 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from api.main import app
-from api.middleware.validation import (
+from main import app
+from middleware.validation import (
     sanitize_string,
     validate_email_format,
     validate_url,
     enforce_length,
     redact_sensitive,
 )
-from api.middleware.rate_limit import _resolve_rule, _check_memory, _memory_store
+from middleware.rate_limit import _resolve_rule, _check_memory, _memory_store
 
 client = TestClient(app)
 
@@ -195,7 +195,7 @@ class TestServiceAPIKeys:
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_create_and_verify_key(self, db_connection):
-        from api.auth.api_keys import create_service_key, verify_service_key
+        from auth.api_keys import create_service_key, verify_service_key
 
         created = await create_service_key("ml-worker", ["ml:predict"])
         assert created["api_key"].startswith("ak_")
@@ -208,7 +208,7 @@ class TestServiceAPIKeys:
     @pytest.mark.asyncio
     async def test_verify_rejects_garbage_key(self, db_connection):
         from fastapi import HTTPException
-        from api.auth.api_keys import verify_service_key
+        from auth.api_keys import verify_service_key
 
         with pytest.raises(HTTPException) as exc:
             await verify_service_key("ak_definitely-not-real")
@@ -218,7 +218,7 @@ class TestServiceAPIKeys:
     @pytest.mark.asyncio
     async def test_scope_enforcement(self, db_connection):
         from fastapi import HTTPException
-        from api.auth.api_keys import create_service_key, verify_service_key
+        from auth.api_keys import create_service_key, verify_service_key
 
         created = await create_service_key("webhook-worker", ["webhooks:deliver"])
         with pytest.raises(HTTPException) as exc:
@@ -230,7 +230,7 @@ class TestServiceAPIKeys:
     async def test_revoked_key_rejected(self, db_connection):
         from uuid import UUID
         from fastapi import HTTPException
-        from api.auth.api_keys import (
+        from auth.api_keys import (
             create_service_key,
             verify_service_key,
             revoke_service_key,

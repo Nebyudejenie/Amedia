@@ -6,8 +6,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field, HttpUrl
 
-from api.clients import PostgreSQLPool
-from api.auth.security import get_current_user, get_current_admin, TokenData
+from clients import PostgreSQLPool
+from auth.security import get_current_user, get_current_admin, TokenData
 
 logger = logging.getLogger(__name__)
 

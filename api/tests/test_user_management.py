@@ -6,14 +6,14 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
-from api.main import app
-from api.routers.auth import (
+from main import app
+from routers.auth import (
     hash_password,
     verify_password,
     validate_password_strength,
 )
-from api.auth.jwt_handler import create_access_token
-from api.auth.security import clear_revocation_list
+from auth.jwt_handler import create_access_token
+from auth.security import clear_revocation_list
 
 client = TestClient(app)
 

@@ -7,7 +7,7 @@ import uuid
 import jwt
 from jwt import PyJWTError
 
-from api.config import settings
+from config import settings
 
 # Token configuration
 ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hour

@@ -3,7 +3,7 @@ import pytest
 from uuid import uuid4
 from datetime import date, datetime, timedelta
 
-from api.analytics import (
+from analytics import (
     MetricsService,
     CohortService,
     AttributionService,

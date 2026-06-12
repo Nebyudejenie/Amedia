@@ -4,7 +4,7 @@ from uuid import UUID
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-from api.clients import PostgreSQLPool, RedisClient
+from clients import PostgreSQLPool, RedisClient
 
 logger = logging.getLogger(__name__)
 

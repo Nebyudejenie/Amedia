@@ -7,7 +7,7 @@ from fastapi import HTTPException, Request, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jwt import PyJWTError
 
-from api.auth.jwt_handler import verify_token, decode_token_unsafe
+from auth.jwt_handler import verify_token, decode_token_unsafe
 
 logger = logging.getLogger(__name__)
 

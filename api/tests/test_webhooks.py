@@ -3,8 +3,8 @@ import pytest
 import json
 from uuid import uuid4
 
-from api.webhooks.signatures import sign_payload, verify_signature, generate_secret
-from api.webhooks.handlers import (
+from webhooks.signatures import sign_payload, verify_signature, generate_secret
+from webhooks.handlers import (
     emit_event,
     create_subscription,
     delete_subscription,
@@ -204,7 +204,7 @@ class TestWebhookRetryLogic:
     @pytest.mark.unit
     def test_retry_schedule(self):
         """Test exponential backoff retry schedule."""
-        from api.workers.webhook_worker import RETRY_SCHEDULE
+        from workers.webhook_worker import RETRY_SCHEDULE
 
         assert RETRY_SCHEDULE[0] == 60  # 1 minute
         assert RETRY_SCHEDULE[1] == 300  # 5 minutes

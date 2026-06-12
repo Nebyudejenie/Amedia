@@ -3,7 +3,7 @@ import logging
 from typing import Optional
 import httpx
 
-from api.ml.base_service import MLServiceBase, MLPredictionFailed
+from ml.base_service import MLServiceBase, MLPredictionFailed
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,7 @@ Text: {text}
 Respond with exactly this format (valid JSON):
 {{"sentiment": "positive|negative|neutral", "confidence": 0.0-1.0, "score": -1.0 to 1.0}}"""
 
-        from api.clients import OllamaClient
+        from clients import OllamaClient
 
         try:
             response = await OllamaClient.generate("neural-chat", prompt)

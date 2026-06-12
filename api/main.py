@@ -10,7 +10,7 @@ from prometheus_client import Counter, Histogram, generate_latest
 
 from clients import PostgreSQLPool, RedisClient, MinIOClient, QdrantClient
 from config import settings
-from routers import auth, account, users, content, health, media, workflow, ml, webhooks, analytics
+from routers import auth, account, users, content, health, media, workflow, ml, webhooks, analytics, feeds
 from middleware.rate_limit import RateLimitMiddleware
 from middleware.security_headers import SecurityHeadersMiddleware, SafeErrorMiddleware
 
@@ -103,6 +103,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(auth.router)
 app.include_router(account.router)
 app.include_router(users.router)
+app.include_router(feeds.router)
 app.include_router(content.router)
 app.include_router(workflow.router)
 app.include_router(media.router)

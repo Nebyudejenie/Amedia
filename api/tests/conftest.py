@@ -1,4 +1,10 @@
 """Pytest configuration and shared fixtures."""
+import sys
+from pathlib import Path
+
+# Make api/ modules importable as bare names (mirrors PYTHONPATH=/app in containers)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import asyncio
 import os
 from uuid import UUID, uuid4
@@ -8,9 +14,9 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from api.main import app
-from api.clients import PostgreSQLPool, RedisClient
-from api.config import settings
+from main import app
+from clients import PostgreSQLPool, RedisClient
+from config import settings
 
 
 @pytest.fixture(scope="session")

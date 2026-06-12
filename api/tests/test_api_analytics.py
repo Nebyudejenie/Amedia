@@ -4,7 +4,7 @@ from uuid import uuid4
 from datetime import date, timedelta
 from fastapi.testclient import TestClient
 
-from api.main import app
+from main import app
 
 client = TestClient(app)
 

@@ -2,13 +2,13 @@
 import pytest
 from uuid import uuid4
 
-from api.ml import (
+from ml import (
     SentimentService,
     ForecastService,
     SegmentationService,
     RecommendationService,
 )
-from api.ml.base_service import MLPredictionFailed
+from ml.base_service import MLPredictionFailed
 
 
 class TestSentimentService:

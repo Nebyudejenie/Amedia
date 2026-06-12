@@ -241,6 +241,37 @@ services:
   # ============================================================================
   # BACKGROUND WORKERS
   # ============================================================================
+  rss-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    image: ${REGISTRY}/arada-os:latest
+    container_name: arada-rss-worker-prod
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DEBUG: "false"
+      APP_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-arada}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD required}
+      DB_NAME: ${DB_NAME:-arada}
+      RSS_FETCH_INTERVAL_MINUTES: ${RSS_FETCH_INTERVAL_MINUTES:-15}
+      RSS_FETCH_TIMEOUT_SECONDS: ${RSS_FETCH_TIMEOUT_SECONDS:-30}
+      RSS_BATCH_SIZE: ${RSS_BATCH_SIZE:-20}
+      RSS_ERROR_THRESHOLD: ${RSS_ERROR_THRESHOLD:-5}
+    command: python workers/rss_worker.py
+    networks:
+      - arada-internal
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+
   worker-content:
     build:
       context: .

@@ -4,8 +4,8 @@ from uuid import UUID
 from typing import Optional
 from datetime import datetime
 
-from api.clients import PostgreSQLPool
-from api.ml.base_service import MLServiceError, MLModelNotFound
+from clients import PostgreSQLPool
+from ml.base_service import MLServiceError, MLModelNotFound
 
 logger = logging.getLogger(__name__)
 

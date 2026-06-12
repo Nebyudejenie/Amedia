@@ -4,8 +4,8 @@ from datetime import date
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.dependencies import get_current_user, TokenData, require_role
-from api.analytics import (
+from dependencies import get_current_user, TokenData, require_role
+from analytics import (
     MetricsService,
     CohortService,
     AttributionService,

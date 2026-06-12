@@ -3,7 +3,7 @@ import logging
 from uuid import UUID
 from typing import Optional
 
-from api.clients import PostgreSQLPool
+from clients import PostgreSQLPool
 
 logger = logging.getLogger(__name__)
 

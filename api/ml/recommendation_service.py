@@ -2,7 +2,7 @@
 import logging
 from typing import Optional
 
-from api.ml.base_service import MLServiceBase, MLPredictionFailed
+from ml.base_service import MLServiceBase, MLPredictionFailed
 
 logger = logging.getLogger(__name__)
 

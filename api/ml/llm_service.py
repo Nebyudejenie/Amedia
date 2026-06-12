@@ -3,9 +3,9 @@ import logging
 from typing import Optional
 import httpx
 
-from api.ml.base_service import MLServiceBase, MLPredictionFailed
-from api.clients import RedisClient
-from api.config import settings
+from ml.base_service import MLServiceBase, MLPredictionFailed
+from clients import RedisClient
+from config import settings
 
 logger = logging.getLogger(__name__)
 

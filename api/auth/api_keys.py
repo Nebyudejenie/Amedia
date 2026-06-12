@@ -12,7 +12,7 @@ from uuid import UUID
 
 from fastapi import Header, HTTPException, status
 
-from api.clients import PostgreSQLPool
+from clients import PostgreSQLPool
 
 logger = logging.getLogger(__name__)
 

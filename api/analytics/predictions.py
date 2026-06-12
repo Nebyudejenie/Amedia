@@ -4,7 +4,7 @@ from uuid import UUID
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-from api.clients import PostgreSQLPool
+from clients import PostgreSQLPool
 
 logger = logging.getLogger(__name__)
 

@@ -3,14 +3,14 @@ import asyncio
 import logging
 from datetime import datetime
 
-from api.clients import PostgreSQLPool, RedisClient
-from api.ml import (
+from clients import PostgreSQLPool, RedisClient
+from ml import (
     SentimentService,
     ForecastService,
     SegmentationService,
     RecommendationService,
 )
-from api.ml.model_service import ModelService
+from ml.model_service import ModelService
 
 logger = logging.getLogger(__name__)
 

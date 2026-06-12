@@ -17,7 +17,7 @@ from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from api.auth.jwt_handler import decode_token_unsafe
+from auth.jwt_handler import decode_token_unsafe
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ def _identify(request: Request, by: str) -> str:
 
 async def _check_redis(key: str, limit: int) -> tuple[bool, int]:
     """Sliding window via Redis sorted set. Returns (allowed, retry_after)."""
-    from api.clients import RedisClient
+    from clients import RedisClient
 
     redis = RedisClient._redis
     if redis is None:

@@ -3,10 +3,10 @@ import pytest
 from uuid import uuid4
 from datetime import datetime, timedelta
 
-from api.ml import SentimentService
-from api.webhooks.handlers import emit_event
-from api.webhooks.signatures import generate_secret, sign_payload
-from api.analytics import (
+from ml import SentimentService
+from webhooks.handlers import emit_event
+from webhooks.signatures import generate_secret, sign_payload
+from analytics import (
     MetricsService,
     CohortService,
     PredictionService,
@@ -45,7 +45,7 @@ class TestContentAnalysisWorkflow:
     @pytest.mark.asyncio
     async def test_webhook_event_emission_workflow(self, db_connection, test_workspace, test_user):
         """Test workflow: create subscription → emit event → queue delivery."""
-        from api.webhooks.handlers import create_subscription
+        from webhooks.handlers import create_subscription
 
         # Step 1: Create subscription
         subscription_id = await create_subscription(
@@ -194,7 +194,7 @@ class TestMultiServiceWorkflow:
         self, db_connection, test_workspace, test_user, test_content
     ):
         """Test: analyze content → emit webhook → deliver event."""
-        from api.webhooks.handlers import create_subscription
+        from webhooks.handlers import create_subscription
 
         # Step 1: Create webhook subscription
         subscription_id = await create_subscription(
@@ -238,7 +238,7 @@ class TestMultiServiceWorkflow:
     @pytest.mark.asyncio
     async def test_segmentation_with_predictions(self, db_connection, test_workspace):
         """Test: segment users → predict metrics per segment."""
-        from api.ml import SegmentationService
+        from ml import SegmentationService
 
         # Step 1: Segment users
         features = [

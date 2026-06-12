@@ -7,9 +7,9 @@ from uuid import UUID
 
 import httpx
 
-from api.clients import PostgreSQLPool, RedisClient
-from api.webhooks.signatures import sign_payload
-from api.config import settings
+from clients import PostgreSQLPool, RedisClient
+from webhooks.signatures import sign_payload
+from config import settings
 
 logger = logging.getLogger(__name__)
 

@@ -3,15 +3,15 @@ from uuid import UUID
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from api.dependencies import get_current_user, TokenData, require_role
-from api.webhooks.handlers import (
+from dependencies import get_current_user, TokenData, require_role
+from webhooks.handlers import (
     create_subscription,
     delete_subscription,
     get_subscriptions,
     get_delivery_attempts,
 )
-from api.webhooks.signatures import generate_secret
-from api.clients import PostgreSQLPool
+from webhooks.signatures import generate_secret
+from clients import PostgreSQLPool
 
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
 
@@ -257,7 +257,7 @@ async def retry_delivery(
                 delivery_id,
             )
 
-            from api.clients import RedisClient
+            from clients import RedisClient
             await RedisClient.lpush("webhook_queue", str(delivery_id))
 
             return {"status": "queued"}

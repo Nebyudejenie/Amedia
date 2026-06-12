@@ -3,16 +3,16 @@ from uuid import UUID
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from api.dependencies import get_current_user, TokenData, require_role
-from api.ml import (
+from dependencies import get_current_user, TokenData, require_role
+from ml import (
     LLMService,
     ForecastService,
     SegmentationService,
     SentimentService,
     RecommendationService,
 )
-from api.ml.model_service import ModelService
-from api.ml.base_service import MLServiceError, MLPredictionFailed
+from ml.model_service import ModelService
+from ml.base_service import MLServiceError, MLPredictionFailed
 
 router = APIRouter(prefix="/ml", tags=["ML Services"])
 
