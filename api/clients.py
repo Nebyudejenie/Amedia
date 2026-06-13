@@ -176,6 +176,39 @@ class MinIOClient:
             logger.error(f"MinIO bucket create error: {e}")
             raise
 
+    @classmethod
+    def put_file(cls, bucket: str, key: str, file_path: str, content_type: str) -> None:
+        """Upload a file from disk (streamed) to MinIO."""
+        if not cls._client:
+            raise RuntimeError("MinIO not initialized")
+        try:
+            cls._client.fput_object(bucket, key, file_path, content_type=content_type)
+        except S3Error as e:
+            logger.error(f"MinIO put_file error: {e}")
+            raise
+
+    @classmethod
+    def remove_object(cls, bucket: str, key: str) -> None:
+        """Delete an object from MinIO (no error if it is already gone)."""
+        if not cls._client:
+            raise RuntimeError("MinIO not initialized")
+        try:
+            cls._client.remove_object(bucket, key)
+        except S3Error as e:
+            logger.error(f"MinIO remove error: {e}")
+            raise
+
+    @classmethod
+    def presigned_get(cls, bucket: str, key: str, expires_seconds: int = 3600) -> str:
+        """Time-limited GET URL for direct playback/download."""
+        if not cls._client:
+            raise RuntimeError("MinIO not initialized")
+        from datetime import timedelta
+
+        return cls._client.presigned_get_object(
+            bucket, key, expires=timedelta(seconds=expires_seconds)
+        )
+
 
 class QdrantClient:
     """Wrapper around Qdrant async client."""

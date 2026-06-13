@@ -27,10 +27,12 @@ RUN pip install --user --no-cache-dir --no-warn-script-location \
 FROM python:3.11-slim
 
 # Install only runtime dependencies
+# ffmpeg/ffprobe are required by the video-generation worker (compose + probe)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
     dumb-init \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user for security

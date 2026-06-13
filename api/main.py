@@ -10,7 +10,7 @@ from prometheus_client import Counter, Histogram, generate_latest
 
 from clients import PostgreSQLPool, RedisClient, MinIOClient, QdrantClient
 from config import settings
-from routers import auth, account, users, content, health, media, workflow, ml, webhooks, analytics, feeds, telegram, billing
+from routers import auth, account, users, content, health, media, workflow, ml, webhooks, analytics, feeds, telegram, billing, videos
 from middleware.rate_limit import RateLimitMiddleware
 from middleware.security_headers import SecurityHeadersMiddleware, SafeErrorMiddleware
 
@@ -106,6 +106,7 @@ app.include_router(users.router)
 app.include_router(feeds.router)
 app.include_router(telegram.router)
 app.include_router(billing.router)
+app.include_router(videos.router)
 app.include_router(content.router)
 app.include_router(workflow.router)
 app.include_router(media.router)

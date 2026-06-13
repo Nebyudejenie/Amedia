@@ -272,6 +272,48 @@ services:
         max-size: "100m"
         max-file: "10"
 
+  video-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    image: ${REGISTRY}/arada-os:latest
+    container_name: arada-video-worker-prod
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      DEBUG: "false"
+      APP_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-arada}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD required}
+      DB_NAME: ${DB_NAME:-arada}
+      MINIO_HOST: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-arada}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY required}
+      OLLAMA_HOST: ${OLLAMA_HOST:-ollama}
+      OLLAMA_PORT: ${OLLAMA_PORT:-11434}
+      VIDEO_SCRIPT_MODEL: ${VIDEO_SCRIPT_MODEL:-mistral}
+      UNSPLASH_ACCESS_KEY: ${UNSPLASH_ACCESS_KEY:-}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      VIDEO_CONCURRENCY: ${VIDEO_CONCURRENCY:-3}
+      VIDEO_POLL_SECONDS: ${VIDEO_POLL_SECONDS:-10}
+      VIDEO_MAX_ATTEMPTS: ${VIDEO_MAX_ATTEMPTS:-3}
+      VIDEO_SLOW_ALERT_SECONDS: ${VIDEO_SLOW_ALERT_SECONDS:-300}
+    command: python workers/video_worker.py
+    networks:
+      - arada-internal
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+
   worker-content:
     build:
       context: .
